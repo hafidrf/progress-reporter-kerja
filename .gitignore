@@ -1,0 +1,19 @@
+node_modules/
+dist/
+dist-electron/
+*.db
+*.db-journal
+.DS_Store
+
+# Internal planning notes (not for public repo)
+PLAN.md
+
+# Discord automation — local/session data
+scripts/discord-browser/node_modules/
+scripts/discord-browser/chrome-profile/
+scripts/discord-browser/.tmp/
+scripts/discord-browser/config.json
+scripts/discord-browser/messages-pending.json
+scripts/discord-browser/run-daily.log
+scripts/discord-browser/run-daily.pid
+scripts/discord-browser/discord-storage.json

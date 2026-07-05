@@ -1,0 +1,5 @@
+{
+  "channelUrl": "https://discord.com/channels/YOUR_GUILD_ID/YOUR_CHANNEL_ID",
+  "chromeProfileDir": "chrome-profile",
+  "cdpPort": 9333
+}

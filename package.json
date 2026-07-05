@@ -1,0 +1,40 @@
+{
+  "name": "progress-reporter-kerja",
+  "version": "0.1.0",
+  "description": "Desktop app untuk jadwalkan progress Discord otomatis",
+  "author": "hafidrf",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hafidrf/progress-reporter-kerja.git"
+  },
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron . -- --prk-dev\"",
+    "start": "npm run build && electron .",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "build": "npm run build:electron && vite build",
+    "postinstall": "electron-rebuild -f -w better-sqlite3 && npm install --prefix scripts/discord-browser",
+    "setup:discord": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Copy-Item -Force scripts/discord-browser/config.example.json scripts/discord-browser/config.json -ErrorAction SilentlyContinue; Copy-Item -Force scripts/discord-browser/messages-pending.example.json scripts/discord-browser/messages-pending.json -ErrorAction SilentlyContinue\"",
+    "desktop-shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/create-desktop-shortcut.ps1",
+    "test": "npm run build:electron && node dist-electron/test/run-tests.js",
+    "test:integration": "node scripts/integration-test.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.9.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.2",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "concurrently": "^9.1.2",
+    "electron": "^35.1.5",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.3",
+    "wait-on": "^8.0.3"
+  }
+}

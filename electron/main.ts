@@ -22,6 +22,7 @@ import {
   listWorkDays,
   markMessageDone,
   saveLogout,
+  setUiLanguage,
   todayDate,
   updateMessage,
 } from './db';
@@ -83,6 +84,11 @@ ipcMain.handle('listWorkDays', () => listWorkDays());
 ipcMain.handle('getMessages', (_e, workDayId: number) => getMessages(workDayId));
 
 ipcMain.handle('getSettings', () => getSettings());
+
+ipcMain.handle('setUiLanguage', (_e, lang: 'id' | 'en') => {
+  setUiLanguage(lang);
+  return getSettings();
+});
 
 ipcMain.handle(
   'addLogin',

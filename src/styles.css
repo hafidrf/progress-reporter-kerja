@@ -15,7 +15,17 @@ header {
 }
 header h1 { margin: 0; font-size: 1.35rem; }
 header p { margin: 0; opacity: 0.85; }
-.header-actions { margin-left: auto; display: flex; gap: 8px; }
+.header-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.lang-switch {
+  display: flex;
+  gap: 4px;
+  margin-right: 4px;
+}
+.lang-switch button {
+  margin-top: 0;
+  min-width: 42px;
+  padding: 8px 10px;
+}
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

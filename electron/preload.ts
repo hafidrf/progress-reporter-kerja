@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('api', {
   listWorkDays: () => ipcRenderer.invoke('listWorkDays'),
   getMessages: (workDayId: number) => ipcRenderer.invoke('getMessages', workDayId),
   getSettings: () => ipcRenderer.invoke('getSettings'),
+  setUiLanguage: (lang: 'id' | 'en') => ipcRenderer.invoke('setUiLanguage', lang),
   addLogin: (payload: {
     workDayId: number;
     scheduled_time: string;

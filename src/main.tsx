@@ -7,6 +7,7 @@ import type {
   WorkStatus,
   DayReport,
 } from './types';
+import { I18nProvider, useI18n } from './I18nContext';
 import './styles.css';
 
 function statusIcon(status: string) {
@@ -35,7 +36,8 @@ function shiftDate(date: string, days: number) {
   return `${yy}-${mm}-${dd}`;
 }
 
-function App() {
+function AppContent() {
+  const { t, locale, setLocale } = useI18n();
   const [tab, setTab] = useState<'kerja' | 'history'>('kerja');
   const [todayStr, setTodayStr] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
@@ -222,7 +224,7 @@ function App() {
   const handleSendNow = async (id: number) => {
     setBusy(true);
     const result = await window.api.sendNow(id);
-    if (!result.ok) alert(result.error ?? 'Gagal kirim');
+    if (!result.ok) alert(result.error ?? t('sendFailed'));
     await refresh();
     setBusy(false);
   };
@@ -238,44 +240,69 @@ function App() {
     ? Math.min(100, (workStatus.cleanHours / workStatus.targetHours) * 100)
     : 0;
 
-  const dayLabel = isToday
-    ? 'Hari ini'
-    : isFuture
-      ? 'Planning'
-      : 'History';
+  const dayLabel = isToday ? t('today') : isFuture ? t('planning') : t('history');
+
+  const handleLanguageChange = async (lang: 'id' | 'en') => {
+    if (lang === locale) return;
+    await setLocale(lang);
+    await refresh();
+  };
+
+  const msgTypeLabel = (type: string) => {
+    if (type === 'login') return t('login');
+    if (type === 'progress') return t('progress');
+    if (type === 'logout') return t('logout');
+    return type;
+  };
 
   return (
     <div className="app">
       <header>
         <div>
-          <h1>Progress Reporter Kerja</h1>
+          <h1>{t('appTitle')}</h1>
           <p>
             <strong>{formatDateId(selectedDate || '...')}</strong> · {dayLabel} ·
-            Scheduler:{' '}
+            {t('scheduler')}:{' '}
             <strong>
               {schedulerRunning && schedulerDayId === day?.id
-                ? 'AKTIF'
+                ? t('schedulerActive')
                 : schedulerRunning
-                  ? 'AKTIF (hari lain)'
-                  : 'IDLE'}
+                  ? t('schedulerActiveOther')
+                  : t('schedulerIdle')}
             </strong>
-            {workStatus?.onBreak ? ' · ⏸ BREAK' : ''}
+            {workStatus?.onBreak ? ` · ⏸ ${t('onBreak')}` : ''}
           </p>
         </div>
         <div className="header-actions">
+          <div className="lang-switch" title={t('language')}>
+            <button
+              type="button"
+              className={locale === 'id' ? '' : 'secondary'}
+              onClick={() => handleLanguageChange('id')}
+            >
+              {t('langId')}
+            </button>
+            <button
+              type="button"
+              className={locale === 'en' ? '' : 'secondary'}
+              onClick={() => handleLanguageChange('en')}
+            >
+              {t('langEn')}
+            </button>
+          </div>
           <button type="button" onClick={() => window.api.openDiscordLogin()}>
-            Setup Discord
+            {t('setupDiscord')}
           </button>
           <button
             type="button"
             onClick={handleStart}
             disabled={busy || schedulerRunning || !isToday}
-            title={!isToday ? 'Hanya untuk hari ini' : undefined}
+            title={!isToday ? t('onlyToday') : undefined}
           >
-            Mulai Hari Ini
+            {t('startToday')}
           </button>
           <button type="button" onClick={handleStop} disabled={!schedulerRunning}>
-            Stop
+            {t('stop')}
           </button>
         </div>
       </header>
@@ -305,7 +332,7 @@ function App() {
           className="secondary"
           onClick={() => setSelectedDate(todayStr)}
         >
-          Hari ini
+          {t('today')}
         </button>
         <div className="tabs">
           <button
@@ -313,33 +340,29 @@ function App() {
             className={tab === 'kerja' ? '' : 'secondary'}
             onClick={() => setTab('kerja')}
           >
-            Kerja / Plan
+            {t('tabWork')}
           </button>
           <button
             type="button"
             className={tab === 'history' ? '' : 'secondary'}
             onClick={() => setTab('history')}
           >
-            History
+            {t('tabHistory')}
           </button>
         </div>
       </div>
 
-      {isFuture && (
-        <p className="banner plan">Mode planning — draft saja. Klik Mulai Hari Ini saat tanggal ini tiba.</p>
-      )}
-      {isPast && (
-        <p className="banner hist">Mode history — bisa lihat & edit. Kirim Discord hanya untuk hari ini.</p>
-      )}
+      {isFuture && <p className="banner plan">{t('bannerPlanning')}</p>}
+      {isPast && <p className="banner hist">{t('bannerHistory')}</p>}
 
       {tab === 'kerja' && workStatus && (
         <section className="card wide work-status">
           <h2>
             {isToday
-              ? 'Kerja bersih (timer live — pause saat break)'
+              ? t('workStatusToday')
               : isPast
-                ? 'Ringkasan kerja bersih hari itu'
-                : 'Kerja bersih (belum jalan — planning)'}
+                ? t('workStatusPast')
+                : t('workStatusFuture')}
           </h2>
           <div className="bar-track">
             <div className="bar-fill" style={{ width: `${cleanPct}%` }} />
@@ -348,18 +371,21 @@ function App() {
             <strong>{workStatus.cleanLabel}</strong>
             <span className="muted"> / {workStatus.targetLabel}</span>
             {workStatus.canLogout ? (
-              <span className="ok"> — Logout siap dikirim</span>
+              <span className="ok"> — {t('logoutReady')}</span>
             ) : !workStatus.sessionStarted ? (
-              <span className="warn"> — Tambah Login dulu</span>
+              <span className="warn"> — {t('addLoginFirst')}</span>
             ) : workStatus.onBreak ? (
-              <span className="warn"> — ⏸ BREAK (timer pause)</span>
+              <span className="warn"> — ⏸ {t('onBreakPause')}</span>
             ) : isToday ? (
-              <span className="warn"> — Sisa {workStatus.remainingLabel}</span>
+              <span className="warn">
+                {' '}
+                — {t('remaining')} {workStatus.remainingLabel}
+              </span>
             ) : null}
           </p>
           {isToday && (
             <p className="eta-complete">
-              Perkiraan selesai kerja bersih (8 jam):{' '}
+              {t('etaComplete')}{' '}
               <strong>{workStatus.etaCompleteLabel}</strong>
               {workStatus.etaCompleteNote ? (
                 <span className="muted"> — {workStatus.etaCompleteNote}</span>
@@ -367,7 +393,7 @@ function App() {
             </p>
           )}
           <p className="muted">
-            Rencana ETA progress: {workStatus.plannedLabel}
+            {t('plannedEta')} {workStatus.plannedLabel}
           </p>
         </section>
       )}
@@ -375,40 +401,40 @@ function App() {
       {tab === 'kerja' && (
         <main className="grid">
           <section className="card">
-            <h2>Login</h2>
+            <h2>{t('login')}</h2>
             <label>
-              Jam
+              {t('time')}
               <input value={loginTime} onChange={(e) => setLoginTime(e.target.value)} />
             </label>
             <label>
-              Baris 1
+              {t('line1')}
               <input value={loginLine1} onChange={(e) => setLoginLine1(e.target.value)} />
             </label>
             <label>
-              Baris 2
+              {t('line2')}
               <input value={loginLine2} onChange={(e) => setLoginLine2(e.target.value)} />
             </label>
             <button type="button" onClick={handleAddLogin} disabled={busy}>
-              + Tambah Login
+              {t('addLogin')}
             </button>
           </section>
 
           <section className="card">
-            <h2>Progress</h2>
+            <h2>{t('progress')}</h2>
             <label>
-              Jam
+              {t('time')}
               <input value={progressTime} onChange={(e) => setProgressTime(e.target.value)} />
             </label>
             <label>
-              Judul
+              {t('title')}
               <input
                 value={progressTitle}
                 onChange={(e) => setProgressTitle(e.target.value)}
-                placeholder="Integrate ... / Break Start"
+                placeholder={t('titlePlaceholder')}
               />
             </label>
             <label>
-              Design ID
+              {t('designId')}
               <input
                 value={progressDesignId}
                 onChange={(e) => setProgressDesignId(e.target.value)}
@@ -416,19 +442,20 @@ function App() {
               />
             </label>
             <label>
-              ETA
+              {t('eta')}
               <input
                 value={progressEta}
                 onChange={(e) => setProgressEta(e.target.value)}
-                placeholder="1hr atau 1hr 20m"
+                placeholder={t('etaPlaceholder')}
               />
             </label>
             <p className="hint">
-              Format ETA: <code>1hr</code>, <code>1hr 20m</code>, <code>1 jam 20 menit</code>
+              {t('etaHint')} <code>1hr</code>, <code>1hr 20m</code>,{' '}
+              <code>1 jam 20 menit</code>
             </p>
             <div className="row-actions">
               <button type="button" onClick={handleAddProgress} disabled={busy}>
-                + Tambah Progress
+                {t('addProgress')}
               </button>
               <button
                 type="button"
@@ -436,7 +463,7 @@ function App() {
                 onClick={() => addBreak('start')}
                 disabled={busy}
               >
-                Break Start
+                {t('breakStart')}
               </button>
               <button
                 type="button"
@@ -444,19 +471,19 @@ function App() {
                 onClick={() => addBreak('end')}
                 disabled={busy}
               >
-                Break End
+                {t('breakEnd')}
               </button>
             </div>
           </section>
 
           <section className="card">
-            <h2>Logout</h2>
+            <h2>{t('logout')}</h2>
             <label>
-              Jam
+              {t('time')}
               <input value={logoutTime} onChange={(e) => setLogoutTime(e.target.value)} />
             </label>
             <label>
-              Integration (manual)
+              {t('integrationManual')}
               <textarea
                 rows={3}
                 value={integration}
@@ -464,7 +491,7 @@ function App() {
               />
             </label>
             <label>
-              Pending (manual)
+              {t('pendingManual')}
               <textarea
                 rows={4}
                 value={pending}
@@ -472,21 +499,19 @@ function App() {
               />
             </label>
             <button type="button" onClick={handleSaveLogout} disabled={busy}>
-              Simpan Logout (draft)
+              {t('saveLogoutDraft')}
             </button>
-            <p className="hint">
-              Kirim logout hanya hari ini, setelah timer ≥ 8 jam & tidak break.
-            </p>
+            <p className="hint">{t('logoutHint')}</p>
             {logoutPreview && (
               <div className="preview">
-                <strong>Sum (auto):</strong>
+                <strong>{t('sumAuto')}</strong>
                 <pre>{logoutPreview.sum}</pre>
               </div>
             )}
           </section>
 
           <section className="card wide">
-            <h2>Pesan tanggal ini</h2>
+            <h2>{t('messagesToday')}</h2>
             <ul className="message-list">
               {messages.map((m) => {
                 const isLogout = m.type === 'logout';
@@ -495,15 +520,15 @@ function App() {
                 return (
                   <li key={m.id}>
                     <span>
-                      {statusIcon(m.status)} {m.scheduled_time} · {m.type}
+                      {statusIcon(m.status)} {m.scheduled_time} · {msgTypeLabel(m.type)}
                       {m.title ? ` · ${m.title}` : ''}
                       {m.type === 'progress' && m.eta && m.eta !== '-'
-                        ? ` · ETA ${m.eta}`
+                        ? ` · ${t('etaPrefix')} ${m.eta}`
                         : ''}
                     </span>
                     <span className="row-actions">
                       <button type="button" className="secondary" onClick={() => openEdit(m)}>
-                        Edit
+                        {t('edit')}
                       </button>
                       {m.status !== 'sent' && (
                         <button
@@ -511,9 +536,9 @@ function App() {
                           className="done-btn"
                           onClick={() => handleMarkDone(m.id)}
                           disabled={busy}
-                          title="Tandai sudah terkirim (tanpa kirim ulang ke Discord)"
+                          title={t('doneTitle')}
                         >
-                          Done
+                          {t('done')}
                         </button>
                       )}
                       {m.status !== 'sent' && isToday && (
@@ -522,7 +547,7 @@ function App() {
                           onClick={() => handleSendNow(m.id)}
                           disabled={busy || !!sendBlocked}
                         >
-                          Kirim sekarang
+                          {t('sendNow')}
                         </button>
                       )}
                       {m.status === 'pending' && (
@@ -533,7 +558,7 @@ function App() {
                             window.api.deleteMessage(m.id).then(refresh)
                           }
                         >
-                          Hapus
+                          {t('delete')}
                         </button>
                       )}
                     </span>
@@ -541,14 +566,14 @@ function App() {
                 );
               })}
               {messages.length === 0 && (
-                <li className="muted">Belum ada pesan untuk tanggal ini.</li>
+                <li className="muted">{t('noMessages')}</li>
               )}
             </ul>
           </section>
 
           <section className="card wide">
-            <h2>Log</h2>
-            <pre className="log-box">{logs.join('\n') || 'Belum ada log'}</pre>
+            <h2>{t('log')}</h2>
+            <pre className="log-box">{logs.join('\n') || t('noLog')}</pre>
           </section>
         </main>
       )}
@@ -556,7 +581,7 @@ function App() {
       {tab === 'history' && (
         <div className="history-layout">
           <aside className="card history-list">
-            <h2>Daftar hari</h2>
+            <h2>{t('dayList')}</h2>
             <ul>
               {days.map((d) => (
                 <li key={d.id}>
@@ -571,30 +596,32 @@ function App() {
                     }}
                   >
                     {formatDateId(d.date)}
-                    {d.date === todayStr ? ' (hari ini)' : ''}
+                    {d.date === todayStr ? ` ${t('todaySuffix')}` : ''}
                   </button>
                 </li>
               ))}
-              {days.length === 0 && <li className="muted">Belum ada data</li>}
+              {days.length === 0 && <li className="muted">{t('noData')}</li>}
             </ul>
           </aside>
 
           <section className="card wide history-report">
-            <h2>Laporan {formatDateId(selectedDate)}</h2>
+            <h2>
+              {t('report')} {formatDateId(selectedDate)}
+            </h2>
             {!report || report.summary.totalCount === 0 ? (
-              <p className="muted">Belum ada dokumentasi untuk tanggal ini.</p>
+              <p className="muted">{t('noReport')}</p>
             ) : (
               <div className="report-body">
                 <p className="report-meta">
-                  Kerja bersih: <strong>{report.workStatus.cleanLabel}</strong> /{' '}
-                  {report.workStatus.targetLabel} · Terkirim{' '}
+                  {t('cleanWork')} <strong>{report.workStatus.cleanLabel}</strong> /{' '}
+                  {report.workStatus.targetLabel} · {t('sent')}{' '}
                   {report.summary.sentCount}/{report.summary.totalCount}
                 </p>
 
                 {report.summary.login && (
                   <div className="report-block">
                     <h3>
-                      {statusIcon(report.summary.login.status)} Login ·{' '}
+                      {statusIcon(report.summary.login.status)} {t('login')} ·{' '}
                       {report.summary.login.time}
                     </h3>
                     <pre>{report.summary.login.text}</pre>
@@ -606,7 +633,7 @@ function App() {
                         if (m) openEdit(m);
                       }}
                     >
-                      Edit Login
+                      {t('editLogin')}
                     </button>
                   </div>
                 )}
@@ -614,8 +641,8 @@ function App() {
                 {report.summary.progress.map((p) => (
                   <div className="report-block" key={p.id}>
                     <h3>
-                      {statusIcon(p.status)} Progress · {p.time}
-                      {p.eta && p.eta !== '-' ? ` · ETA ${p.eta}` : ''}
+                      {statusIcon(p.status)} {t('progress')} · {p.time}
+                      {p.eta && p.eta !== '-' ? ` · ${t('etaPrefix')} ${p.eta}` : ''}
                     </h3>
                     <pre>{p.text}</pre>
                     <button
@@ -626,14 +653,14 @@ function App() {
                         if (m) openEdit(m);
                       }}
                     >
-                      Edit
+                      {t('edit')}
                     </button>
                   </div>
                 ))}
 
                 {report.summary.breaks.length > 0 && (
                   <div className="report-block">
-                    <h3>Break</h3>
+                    <h3>{t('break')}</h3>
                     <ul>
                       {report.summary.breaks.map((b) => (
                         <li key={b.id}>
@@ -646,7 +673,7 @@ function App() {
                               if (m) openEdit(m);
                             }}
                           >
-                            Edit
+                            {t('edit')}
                           </button>
                         </li>
                       ))}
@@ -657,7 +684,7 @@ function App() {
                 {report.summary.logout && (
                   <div className="report-block">
                     <h3>
-                      {statusIcon(report.summary.logout.status)} Logout ·{' '}
+                      {statusIcon(report.summary.logout.status)} {t('logout')} ·{' '}
                       {report.summary.logout.time}
                     </h3>
                     <pre>{report.summary.logout.text}</pre>
@@ -669,7 +696,7 @@ function App() {
                         if (m) openEdit(m);
                       }}
                     >
-                      Edit Logout
+                      {t('editLogout')}
                     </button>
                   </div>
                 )}
@@ -682,19 +709,21 @@ function App() {
       {editMsg && (
         <div className="modal-backdrop">
           <div className="modal card">
-            <h2>Edit {editMsg.type}</h2>
+            <h2>
+              {t('editType')} {msgTypeLabel(editMsg.type)}
+            </h2>
             <label>
-              Jam
+              {t('time')}
               <input value={eTime} onChange={(e) => setETime(e.target.value)} />
             </label>
             {editMsg.type === 'login' && (
               <>
                 <label>
-                  Baris 1
+                  {t('line1')}
                   <input value={eLine1} onChange={(e) => setELine1(e.target.value)} />
                 </label>
                 <label>
-                  Baris 2
+                  {t('line2')}
                   <input value={eLine2} onChange={(e) => setELine2(e.target.value)} />
                 </label>
               </>
@@ -702,15 +731,15 @@ function App() {
             {editMsg.type === 'progress' && (
               <>
                 <label>
-                  Judul
+                  {t('title')}
                   <input value={eTitle} onChange={(e) => setETitle(e.target.value)} />
                 </label>
                 <label>
-                  Design ID
+                  {t('designId')}
                   <input value={eDesign} onChange={(e) => setEDesign(e.target.value)} />
                 </label>
                 <label>
-                  ETA
+                  {t('eta')}
                   <input value={eEta} onChange={(e) => setEEta(e.target.value)} />
                 </label>
               </>
@@ -742,19 +771,19 @@ function App() {
                   checked={eResetPending}
                   onChange={(e) => setEResetPending(e.target.checked)}
                 />
-                Reset status ke pending (bisa kirim ulang)
+                {t('resetPending')}
               </label>
             )}
             <div className="row-actions">
               <button type="button" onClick={saveEdit} disabled={busy}>
-                Simpan
+                {t('save')}
               </button>
               <button
                 type="button"
                 className="secondary"
                 onClick={() => setEditMsg(null)}
               >
-                Batal
+                {t('cancel')}
               </button>
             </div>
           </div>
@@ -766,6 +795,8 @@ function App() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <I18nProvider>
+      <AppContent />
+    </I18nProvider>
   </StrictMode>,
 );

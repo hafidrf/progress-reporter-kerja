@@ -15,6 +15,11 @@ import {
   formatTimer,
   CLEAN_WORK_TARGET_HOURS,
 } from './render';
+import { getUiLanguageFromSetting, t as ti18n } from './i18n';
+
+export function getUiLanguage(): import('./i18n').UiLanguage {
+  return getUiLanguageFromSetting(getSetting('ui_language'));
+}
 
 export type MessageRow = {
   id: number;
@@ -96,6 +101,7 @@ function migrate(database: Database.Database) {
     discord_channel_url: '',
     timezone: 'Asia/Jakarta',
     discord_logged_in: 'false',
+    ui_language: 'id',
   };
   const insert = database.prepare(
     'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)',
@@ -179,7 +185,20 @@ export function getSettings() {
     discord_channel_url: getSetting('discord_channel_url'),
     timezone: getSetting('timezone'),
     discord_logged_in: getSetting('discord_logged_in') === 'true',
+    ui_language: getSetting('ui_language') === 'en' ? 'en' : 'id',
   };
+}
+
+export function setSetting(key: string, value: string) {
+  getDb()
+    .prepare(
+      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    )
+    .run(key, value);
+}
+
+export function setUiLanguage(lang: 'id' | 'en') {
+  setSetting('ui_language', lang);
 }
 
 export function appendLog(message: string) {
@@ -426,12 +445,13 @@ export function getWorkStatus(workDayId: number) {
   const canLogout =
     isToday && sessionStarted && !onBreak && cleanHours + 1e-9 >= targetHours;
   const remainingHours = Math.max(0, targetHours - cleanHours);
+  const lang = getUiLanguage();
 
   let etaCompleteLabel = '—';
   let etaCompleteNote = '';
   if (isFuture) {
     etaCompleteLabel = '—';
-    etaCompleteNote = 'hari planning — timer belum jalan';
+    etaCompleteNote = ti18n('planningTimerNote', lang);
   } else if (sessionStarted && remainingHours > 0 && isToday) {
     const now = Date.now();
     let etaMs = now + remainingHours * 3_600_000;
@@ -461,15 +481,17 @@ export function getWorkStatus(workDayId: number) {
     etaCompleteLabel = `${String(etaDate.getHours()).padStart(2, '0')}:${String(etaDate.getMinutes()).padStart(2, '0')}`;
 
     const notes: string[] = [];
-    if (onBreak) notes.push('sedang break — selesai mundur sampai Break End');
+    if (onBreak) notes.push(ti18n('onBreakEtaNote', lang));
     if (futureBreakMs > 0) {
-      notes.push(`+${formatHoursHuman(futureBreakMs / 3_600_000)} break terjadwal`);
+      notes.push(
+        `+${formatHoursHuman(futureBreakMs / 3_600_000, lang)} ${ti18n('scheduledBreakNote', lang)}`,
+      );
     }
-    notes.push('break ikut menggeser jam selesai');
+    notes.push(ti18n('breakShiftsEta', lang));
     etaCompleteNote = notes.join('; ');
   } else if (sessionStarted && remainingHours <= 0) {
-    etaCompleteLabel = 'sudah tercapai';
-    etaCompleteNote = isPast ? 'ringkasan hari itu' : '';
+    etaCompleteLabel = ti18n('achieved', lang);
+    etaCompleteNote = isPast ? ti18n('pastSummaryNote', lang) : '';
   }
 
   return {
@@ -484,10 +506,10 @@ export function getWorkStatus(workDayId: number) {
     isToday,
     isPast,
     isFuture,
-    plannedLabel: formatHoursHuman(plannedHours),
-    cleanLabel: formatTimer(cleanHours),
-    remainingLabel: formatTimer(remainingHours),
-    targetLabel: formatHoursHuman(targetHours),
+    plannedLabel: formatHoursHuman(plannedHours, lang),
+    cleanLabel: formatTimer(cleanHours, lang),
+    remainingLabel: formatTimer(remainingHours, lang),
+    targetLabel: formatHoursHuman(targetHours, lang),
     etaCompleteLabel,
     etaCompleteNote,
   };

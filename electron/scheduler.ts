@@ -13,6 +13,8 @@ import {
 } from './db';
 import { sendMessageText } from './discord';
 import { formatHoursHuman } from './render';
+import { getUiLanguage } from './db';
+import { t as ti18n, formatLogoutRemaining } from './i18n';
 
 /** Cek antrian tiap 10 detik — tahan monitor mati / screensaver (mengejar pesan terlambat). */
 const HEARTBEAT_MS = 10_000;
@@ -192,19 +194,19 @@ export function stopScheduler() {
 }
 
 export async function startScheduler(workDayId: number) {
+  const lang = getUiLanguage();
   if (schedulerRunning) {
-    return { ok: false, message: 'Scheduler sudah berjalan' };
+    return { ok: false, message: ti18n('schedulerAlreadyRunning', lang) };
   }
 
   const day = getWorkDayById(workDayId);
   if (!day) {
-    return { ok: false, message: 'Hari kerja tidak ditemukan' };
+    return { ok: false, message: ti18n('workDayNotFound', lang) };
   }
   if (day.date !== todayDate()) {
     return {
       ok: false,
-      message:
-        'Scheduler hanya untuk hari ini. Pilih tanggal hari ini, lalu klik Mulai Hari Ini.',
+      message: ti18n('schedulerTodayOnly', lang),
     };
   }
 
@@ -226,10 +228,11 @@ export async function startScheduler(workDayId: number) {
     void tick(workDayId, date);
   }, HEARTBEAT_MS);
 
-  return { ok: true, message: 'Scheduler dimulai' };
+  return { ok: true, message: ti18n('schedulerStarted', lang) };
 }
 
 export async function sendMessageNow(messageId: number) {
+  const lang = getUiLanguage();
   const msg = getMessageById(messageId);
   if (!msg) throw new Error('Message not found');
   const day = getWorkDayById(msg.work_day_id);
@@ -238,8 +241,7 @@ export async function sendMessageNow(messageId: number) {
   if (date !== todayDate()) {
     return {
       ok: false,
-      error:
-        'Kirim Discord hanya untuk hari ini. Hari planning/history tidak dikirim otomatis.',
+      error: ti18n('sendTodayOnly', lang),
     };
   }
 
@@ -247,8 +249,13 @@ export async function sendMessageNow(messageId: number) {
     const status = getWorkStatus(msg.work_day_id);
     if (!status.canLogout) {
       const reason = status.onBreak
-        ? 'Sedang break — kirim Break End dulu, dan pastikan timer kerja bersih sudah 8 jam.'
-        : `Kerja bersih baru ${status.cleanLabel} / ${status.targetLabel}. Sisa ${status.remainingLabel}.`;
+        ? ti18n('logoutOnBreak', lang)
+        : formatLogoutRemaining(
+            status.cleanLabel,
+            status.targetLabel,
+            status.remainingLabel,
+            lang,
+          );
       return { ok: false, error: reason };
     }
     refreshLogoutRender(msg.work_day_id, date);

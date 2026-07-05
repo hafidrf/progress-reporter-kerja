@@ -78,23 +78,32 @@ export function normalizeEta(eta: string | null | undefined): string {
   return formatEtaLabel(hours);
 }
 
-export function formatHoursHuman(hours: number): string {
+export function formatHoursHuman(hours: number, locale: 'id' | 'en' = 'id'): string {
   const totalMins = Math.max(0, Math.round(hours * 60));
   const h = Math.floor(totalMins / 60);
   const m = totalMins % 60;
+  if (locale === 'en') {
+    if (h > 0 && m > 0) return `${h} hr ${m} min`;
+    if (h > 0) return `${h} hr`;
+    return `${m} min`;
+  }
   if (h > 0 && m > 0) return `${h} jam ${m} menit`;
   if (h > 0) return `${h} jam`;
   return `${m} menit`;
 }
 
-/** Timer live: 1 jam 06 mnt 22 dtk */
-export function formatTimer(hours: number): string {
+/** Live timer display */
+export function formatTimer(hours: number, locale: 'id' | 'en' = 'id'): string {
   const totalSecs = Math.max(0, Math.floor(hours * 3600));
   const h = Math.floor(totalSecs / 3600);
   const m = Math.floor((totalSecs % 3600) / 60);
   const s = totalSecs % 60;
   const mm = String(m).padStart(2, '0');
   const ss = String(s).padStart(2, '0');
+  if (locale === 'en') {
+    if (h > 0) return `${h} hr ${mm} min ${ss} sec`;
+    return `${mm} min ${ss} sec`;
+  }
   if (h > 0) return `${h} jam ${mm} mnt ${ss} dtk`;
   return `${mm} mnt ${ss} dtk`;
 }

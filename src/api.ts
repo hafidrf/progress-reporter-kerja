@@ -13,6 +13,7 @@ export interface ElectronAPI {
   listWorkDays: () => Promise<WorkDay[]>;
   getMessages: (workDayId: number) => Promise<Message[]>;
   getSettings: () => Promise<Settings>;
+  setUiLanguage: (lang: 'id' | 'en') => Promise<Settings>;
   addLogin: (payload: {
     workDayId: number;
     scheduled_time: string;

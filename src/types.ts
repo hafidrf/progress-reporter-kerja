@@ -31,6 +31,7 @@ export interface Settings {
   discord_channel_url: string;
   timezone: string;
   discord_logged_in: boolean;
+  ui_language: 'id' | 'en';
 }
 
 export interface LogoutPreview {

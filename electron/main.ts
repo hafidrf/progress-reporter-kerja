@@ -6,9 +6,11 @@ import path from 'path';
 app.commandLine.appendSwitch('disable-background-timer-throttling');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+
 import {
   addLogin,
   addProgress,
+  closeDb,
   deleteMessage,
   getDayReport,
   getLogs,
@@ -26,7 +28,12 @@ import {
   todayDate,
   updateMessage,
 } from './db';
-import { openDiscordLogin, readChannelUrlFromConfig, syncChannelUrl } from './discord';
+import {
+  openDiscordLogin,
+  readChannelUrlFromConfig,
+  shutdownDiscordEngine,
+  syncChannelUrl,
+} from './discord';
 import {
   getSchedulerState,
   sendMessageNow,
@@ -35,17 +42,48 @@ import {
 } from './scheduler';
 
 let mainWindow: BrowserWindow | null = null;
+let isShuttingDown = false;
+
+/** Lepas scheduler, proses Discord/Chrome, dan tutup DB saat app ditutup. */
+function shutdownAllResources() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  stopScheduler();
+  shutdownDiscordEngine();
+  closeDb();
+}
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1040,
     height: 780,
     title: 'Progress Reporter Kerja',
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show();
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
   });
 
   const distHtml = path.join(__dirname, '../dist/index.html');
@@ -61,19 +99,27 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
-  const settings = getSettings();
-  const channelUrl =
-    settings.discord_channel_url.trim() || readChannelUrlFromConfig() || '';
-  if (channelUrl) {
-    syncChannelUrl(channelUrl);
-  }
-  createWindow();
-});
+if (gotSingleInstanceLock) {
+  app.whenReady().then(() => {
+    const settings = getSettings();
+    const channelUrl =
+      settings.discord_channel_url.trim() || readChannelUrlFromConfig() || '';
+    if (channelUrl) {
+      syncChannelUrl(channelUrl);
+    }
+    createWindow();
+  });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+  app.on('before-quit', () => {
+    shutdownAllResources();
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
+}
 
 ipcMain.handle('getTodayDate', () => todayDate());
 

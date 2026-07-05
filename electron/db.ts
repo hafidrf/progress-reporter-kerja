@@ -56,6 +56,17 @@ export function getDb(): Database.Database {
   return db;
 }
 
+export function closeDb() {
+  if (db) {
+    try {
+      db.close();
+    } catch {
+      // ignore
+    }
+    db = null;
+  }
+}
+
 function migrate(database: Database.Database) {
   database.exec(`
     CREATE TABLE IF NOT EXISTS work_days (

@@ -1,40 +1,40 @@
 # Progress Reporter Kerja
 
-Desktop app untuk Windows yang menjadwalkan dan mengirim update progress harian ke Discord — tanpa copy-paste manual, tanpa webhook server, tanpa ganggu Chrome kerja utama.
+A Windows desktop app that schedules and sends daily progress updates to Discord — no manual copy-paste, no webhook server, and no interference with your main Chrome profile.
 
-Dibangun untuk tim yang punya format report tetap (Login → Progress per jam → Logout) dan butuh scheduler yang tetap jalan meski monitor mati atau screensaver aktif.
-
----
-
-## Masalah yang diselesaikan
-
-Update progress harian di Discord sering jadi pekerjaan repetitif:
-
-- Mengetik format yang sama berulang kali
-- Menghitung ulang ringkasan di logout
-- Lupa kirim di jam tertentu
-- Webhook tidak tersedia karena permission server
-
-Solusi di repo ini: **Electron app + SQLite lokal + browser automation via Playwright** dengan profil Chrome terpisah. App mengurus format, jadwal, timer kerja bersih, dan pengiriman — kamu cukup isi rencana kerja pagi hari, lalu klik **Mulai Hari Ini**.
+Built for teams with a fixed reporting format (Login → hourly Progress → Logout) who need a scheduler that keeps running even when the monitor is off or a screensaver is active.
 
 ---
 
-## Fitur utama
+## Problem it solves
 
-| Fitur | Deskripsi |
-|-------|-----------|
-| **Jadwal otomatis** | Login, progress, dan logout terkirim sesuai waktu yang kamu set |
-| **Timer kerja bersih** | Hitung 8 jam target; pause saat Break Start, lanjut setelah Break End |
-| **Gate logout** | Logout tidak terkirim sebelum 8 jam bersih tercapai (kecuali kirim manual) |
-| **Sum otomatis** | Bagian `- Sum:` di logout digenerate dari baris login + judul progress yang sudah terkirim |
-| **Multi-day planning** | Rencanakan beberapa hari ke depan; scheduler hanya aktif untuk hari ini |
-| **History** | Lihat dan edit report hari sebelumnya |
-| **Profil Chrome terpisah** | Discord automation tidak bentrok dengan Chrome kerja utama |
-| **Resilience** | Heartbeat scheduler, retry, dan power-save blocker saat monitor off |
+Daily Discord progress updates tend to become repetitive busywork:
+
+- Retyping the same message format over and over
+- Rebuilding the logout summary by hand
+- Missing scheduled send times
+- No webhook access due to server permissions
+
+This repo combines an **Electron app + local SQLite + Playwright browser automation** with a dedicated Chrome profile. The app handles formatting, scheduling, clean-work timing, and delivery — you plan your day in the morning and click **Mulai Hari Ini** (Start Today).
 
 ---
 
-## Arsitektur
+## Key features
+
+| Feature | Description |
+|---------|-------------|
+| **Automatic scheduling** | Login, progress, and logout messages send at the times you set |
+| **Clean work timer** | Tracks an 8-hour target; pauses on Break Start, resumes after Break End |
+| **Logout gate** | Scheduled logout won't send until 8 clean hours are reached (manual send still available) |
+| **Auto-generated Sum** | The `- Sum:` section in logout is built from login lines + sent progress titles |
+| **Multi-day planning** | Plan several days ahead; the scheduler only runs for today |
+| **History** | View and edit past daily reports |
+| **Isolated Chrome profile** | Discord automation does not conflict with your main browser |
+| **Resilience** | Scheduler heartbeat, retries, and power-save blocking when the monitor is off |
+
+---
+
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -47,33 +47,33 @@ Solusi di repo ini: **Electron app + SQLite lokal + browser automation via Playw
                            ▼
 ┌─────────────────────────────────────────────────────────┐
 │  scripts/discord-browser/ (Playwright engine)           │
-│  ├── send-discord.mjs — buka Chrome, paste, kirim       │
-│  ├── config.json — channel URL (local, tidak di-commit) │
-│  └── chrome-profile/ — session Discord (local)          │
+│  ├── send-discord.mjs — open Chrome, paste, send        │
+│  ├── config.json — channel URL (local, not committed)   │
+│  └── chrome-profile/ — Discord session (local)          │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Kenapa browser automation, bukan webhook?**
+**Why browser automation instead of webhooks?**
 
-Webhook butuh permission Manage Webhooks di server Discord. Banyak tim internal tidak memberi akses itu ke semua developer. UI automation lebih rapuh secara teknis, tapi tidak butuh koordinasi dengan admin server — trade-off yang wajar untuk tool personal/team kecil.
+Webhooks require Manage Webhooks permission on the Discord server. Many internal teams don't grant that to every developer. UI automation is more fragile technically, but it avoids server-admin coordination — a reasonable trade-off for a personal or small-team tool.
 
-**Kenapa SQLite lokal dulu?**
+**Why local SQLite first?**
 
-Data report harian sensitif (rencana kerja, blocker, design ID). Simpan lokal dulu = zero infra, zero latency, zero biaya hosting. Sync ke server (misalnya Laravel API) bisa ditambah nanti tanpa mengubah flow UI.
+Daily reports contain sensitive work data (plans, blockers, design IDs). Keeping data local means zero infrastructure, zero latency, and zero hosting cost. Syncing to a backend (e.g. a Laravel API) can be added later without changing the UI flow.
 
 ---
 
-## Prasyarat
+## Prerequisites
 
 - **Windows 10/11**
-- **Node.js 20+** (LTS disarankan)
-- **Google Chrome** terpasang
-- **PowerShell** (sudah ada di Windows)
-- Akun Discord dengan akses ke channel target
+- **Node.js 20+** (LTS recommended)
+- **Google Chrome** installed
+- **PowerShell** (included with Windows)
+- A Discord account with access to the target channel
 
 ---
 
-## Instalasi
+## Installation
 
 ```powershell
 git clone https://github.com/hafidrf/progress-reporter-kerja.git
@@ -83,7 +83,7 @@ npm run setup:discord
 npm run build
 ```
 
-Edit channel Discord di `scripts/discord-browser/config.json`:
+Edit your Discord channel in `scripts/discord-browser/config.json`:
 
 ```json
 {
@@ -93,53 +93,53 @@ Edit channel Discord di `scripts/discord-browser/config.json`:
 }
 ```
 
-Cara dapat URL channel: buka channel di Discord Web → copy dari address bar.
+To get the channel URL: open the channel in Discord Web and copy it from the address bar.
 
 ---
 
-## Setup Discord (sekali saja)
+## Discord setup (one-time)
 
-1. Jalankan app: `npm start`
-2. Klik **Setup Discord**
-3. Chrome terpisah terbuka → login Discord jika diminta
-4. Pastikan channel target terbuka
-5. Tutup jendela Chrome automation
+1. Run the app: `npm start`
+2. Click **Setup Discord**
+3. A separate Chrome window opens — log in to Discord if prompted
+4. Make sure the target channel is open
+5. Close the automation Chrome window
 
-Session tersimpan di `scripts/discord-browser/chrome-profile/` (folder ini tidak masuk git).
+The session is stored in `scripts/discord-browser/chrome-profile/` (this folder is not committed to git).
 
 ---
 
-## Shortcut desktop (opsional)
+## Desktop shortcut (optional)
 
 ```powershell
 npm run desktop-shortcut
 ```
 
-Shortcut **Progress Reporter Kerja** akan muncul di Desktop.
+This creates a **Progress Reporter Kerja** shortcut on your Desktop.
 
 ---
 
-## Alur kerja harian
+## Daily workflow
 
-### Pagi — rencanakan
+### Morning — plan
 
-1. Buka app (tanggal otomatis mengikuti timezone lokal, default `Asia/Jakarta`)
-2. Isi **Login** — waktu + 2 baris rencana kerja
-3. Tambah **Progress** — satu entry per update (judul, design ID, ETA, jam kirim)
-4. Isi **Logout** — waktu logout, Integration, Pending (Sum otomatis)
-5. Opsional: tambah progress **Break Start** / **Break End** untuk pause timer
+1. Open the app (date follows your local timezone; default is `Asia/Jakarta`)
+2. Fill in **Login** — time + 2 lines describing your plan
+3. Add **Progress** entries — one per update (title, design ID, ETA, send time)
+4. Fill in **Logout** — logout time, Integration, Pending (Sum is automatic)
+5. Optional: add **Break Start** / **Break End** progress entries to pause the timer
 
-### Saat mulai kerja
+### When work starts
 
-Klik **Mulai Hari Ini** → scheduler background aktif. Pesan pending akan terkirim otomatis saat waktunya tiba.
+Click **Mulai Hari Ini** (Start Today) — the background scheduler activates. Pending messages send automatically when their scheduled time arrives.
 
-### Sebelum logout
+### Before logout
 
-Timer menampilkan jam kerja bersih dan perkiraan waktu 8 jam tercapai. Logout terjadwal otomatis menunggu sampai target terpenuhi.
+The timer shows clean work hours and an estimated time when 8 hours will be reached. A scheduled logout waits until that target is met.
 
 ---
 
-## Format pesan
+## Message formats
 
 ### Login
 
@@ -152,12 +152,12 @@ Checking ...
 ### Progress
 
 ```
-Judul task
+Task title
 Design id : XXXX:YYYY
 Eta : 1hr
 ```
 
-Progress khusus break: judul `Break Start` atau `Break End` (tanpa design ID wajib).
+For breaks, use the title `Break Start` or `Break End` (design ID is optional).
 
 ### Logout
 
@@ -165,51 +165,52 @@ Progress khusus break: judul `Break Start` atau `Break End` (tanpa design ID waj
 Logout(DD/MM/YY):
 - Sum: Worked on ..., ..., ...
 - Integration:
-<isi manual, boleh kosong>
+<manual content, can be empty>
 - Pending:
-<isi manual, boleh kosong>
+<manual content, can be empty>
 ```
 
-**Sum** digenerate dari:
-- Baris 1 dan 2 pesan login
-- Judul semua progress yang statusnya `sent` (Break Start/End diabaikan)
+**Sum** is generated from:
 
-**Integration / Pending** diisi manual. Kosongkan saja jika tidak ada — baris `- Integration:` / `- Pending:` tetap ada.
+- Lines 1 and 2 of the login message
+- Titles of all progress messages with status `sent` (Break Start/End entries are excluded)
+
+**Integration / Pending** are filled in manually. Leave them empty if there's nothing to report — the `- Integration:` / `- Pending:` lines still appear.
 
 ---
 
-## Timer kerja bersih
+## Clean work timer
 
-| Konsep | Perilaku |
-|--------|----------|
-| Mulai | Saat pesan login terkirim / session dimulai |
-| Pause | Saat ada progress **Break Start** yang sudah terkirim, belum ada **Break End** |
-| Target | 8 jam kerja bersih (konstanta `CLEAN_WORK_TARGET_HOURS`) |
-| ETA selesai | Estimasi jam wall-clock saat 8 jam bersih tercapai; mundur jika break |
-| Gate logout | Scheduler menahan logout sampai `canLogout === true` |
+| Concept | Behavior |
+|---------|----------|
+| Start | When the login message is sent / session begins |
+| Pause | After a sent **Break Start**, until **Break End** is sent |
+| Target | 8 clean work hours (`CLEAN_WORK_TARGET_HOURS`) |
+| Completion ETA | Wall-clock estimate for when 8 clean hours will be reached; shifts forward during breaks |
+| Logout gate | Scheduler holds logout until `canLogout === true` |
 
 ---
 
 ## Scheduler
 
-- Hanya berjalan untuk **tanggal hari ini** (local timezone)
-- Heartbeat setiap 10 detik — menangkap pesan yang ditambah setelah scheduler start
-- Retry hingga 5x jika kirim gagal
-- `powerSaveBlocker` mencegah OS throttle saat monitor off
-- **Stop** menghentikan scheduler; tidak menghapus pesan pending
+- Only runs for **today's date** (local timezone)
+- 10-second heartbeat — picks up messages added after the scheduler started
+- Up to 5 retries on send failure
+- `powerSaveBlocker` reduces OS throttling when the monitor is off
+- **Stop** halts the scheduler; pending messages are not deleted
 
-Tombol **Done** pada pesan: tandai sudah terkirim tanpa kirim ulang ke Discord (berguna jika sudah kirim manual).
+The **Done** button on a message marks it as sent without posting to Discord again (useful if you already sent it manually).
 
 ---
 
-## Struktur project
+## Project structure
 
 ```
 progress-reporter-kerja/
 ├── electron/           # Main process: DB, scheduler, Discord bridge
 │   ├── db.ts           # SQLite schema & business logic
 │   ├── scheduler.ts    # Background message dispatcher
-│   ├── discord.ts      # Spawn Playwright engine
+│   ├── discord.ts      # Spawns Playwright engine
 │   └── render.ts       # Message formatting & timer math
 ├── src/                # React UI
 ├── scripts/
@@ -217,78 +218,78 @@ progress-reporter-kerja/
 │       ├── send-discord.mjs
 │       ├── config.example.json
 │       └── open-discord-login.ps1
-├── start-app.ps1       # Launcher untuk desktop shortcut
+├── start-app.ps1       # Launcher for desktop shortcut
 └── package.json
 ```
 
 ---
 
-## Scripts npm
+## npm scripts
 
-| Command | Fungsi |
-|---------|--------|
+| Command | Purpose |
+|---------|---------|
 | `npm run dev` | Development mode (Vite + Electron hot reload) |
-| `npm start` | Build + jalankan app |
-| `npm run build` | Compile TypeScript + bundle React |
-| `npm run setup:discord` | Salin file config example ke config lokal |
-| `npm test` | Unit test formatting logic |
-| `npm run test:integration` | Dry-run Discord engine |
-| `npm run desktop-shortcut` | Buat shortcut di Desktop |
+| `npm start` | Build and run the app |
+| `npm run build` | Compile TypeScript and bundle React |
+| `npm run setup:discord` | Copy example config files to local config |
+| `npm test` | Unit tests for formatting logic |
+| `npm run test:integration` | Dry-run the Discord engine |
+| `npm run desktop-shortcut` | Create a Desktop shortcut |
 
 ---
 
 ## Troubleshooting
 
-### Pesan tidak terkirim saat monitor mati
+### Messages not sending when the monitor is off
 
-Pastikan PC tidak sleep (hibernate). App sudah pakai power-save blocker, tapi sleep total tetap menghentikan semua proses.
+Make sure the PC is not sleeping or hibernating. The app uses a power-save blocker, but full system sleep still stops all processes.
 
-### "Kotak chat tidak muncul"
+### "Message box did not appear"
 
-1. Jalankan **Setup Discord** ulang
-2. Login Discord di profil automation
-3. Buka channel target manual sekali
-4. Tutup Chrome automation, coba **Kirim sekarang**
+1. Run **Setup Discord** again
+2. Log in to Discord in the automation profile
+3. Open the target channel manually once
+4. Close the automation Chrome window, then try **Kirim sekarang** (Send now)
 
-### Chrome profil terkunci
+### Chrome profile locked
 
-Tutup jendela Chrome automation (bukan Chrome kerja utama). App otomatis kill proses dengan profil `discord-browser/chrome-profile` sebelum kirim.
+Close the automation Chrome window (not your main work browser). The app kills processes using the `discord-browser/chrome-profile` profile before each send.
 
-### Build gagal di `better-sqlite3`
+### `better-sqlite3` build failure
 
 ```powershell
 npm run postinstall
 ```
 
-Native module perlu di-rebuild untuk versi Electron yang dipakai.
+The native module must be rebuilt for the Electron version in use.
 
-### Logout tidak terkirim otomatis
+### Logout not sending automatically
 
-Normal — scheduler menunggu 8 jam kerja bersih. Cek timer di UI. Kirim manual hanya jika memang sudah waktunya.
+This is expected — the scheduler waits for 8 clean work hours. Check the timer in the UI. Use manual send only when you're sure the target is met.
 
 ---
 
-## Data & privasi
+## Data & privacy
 
-Yang **tidak** masuk repository:
+These files are **not** included in the repository:
 
-- `scripts/discord-browser/config.json` — URL channel kamu
-- `scripts/discord-browser/chrome-profile/` — session login Discord
-- Database SQLite di `%APPDATA%/progress-reporter-kerja/` — riwayat kerja
+- `scripts/discord-browser/config.json` — your channel URL
+- `scripts/discord-browser/chrome-profile/` — Discord login session
+- SQLite database at `%APPDATA%/progress-reporter-kerja/` — work history
 
-Jangan commit file di atas ke git publik.
+Do not commit these to a public git repository.
 
 ---
 
 ## Roadmap
 
-- [ ] Sync history ke backend (Laravel API)
-- [ ] Packaging installer (electron-builder)
-- [ ] Konfigurasi channel URL dari UI settings
-- [ ] Notifikasi desktop saat kirim gagal
+- [ ] Sync history to a backend (Laravel API)
+- [ ] Installer packaging (electron-builder)
+- [ ] Channel URL configuration from the UI
+- [ ] Desktop notifications on send failure
 
 ---
 
-## Lisensi
+## License
 
-MIT — lihat penggunaan di repo ini sebagai referensi; sesuaikan dengan kebijakan tim dan Discord ToS di lingkungan kerjamu.
+MIT — use this as a reference implementation; align with your team's policies and Discord's Terms of Service in your work environment.

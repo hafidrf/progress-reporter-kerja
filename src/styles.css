@@ -1,0 +1,216 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0f1419;
+  color: #e7e9ea;
+}
+.app { padding: 16px 20px 24px; }
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+header h1 { margin: 0; font-size: 1.35rem; }
+header p { margin: 0; opacity: 0.85; }
+.header-actions { margin-left: auto; display: flex; gap: 8px; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.card {
+  background: #16202a;
+  border: 1px solid #2f3b47;
+  border-radius: 10px;
+  padding: 12px;
+}
+.card.wide { grid-column: 1 / -1; }
+.card h2 { margin: 0 0 10px; font-size: 1rem; }
+label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+input, textarea {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #38444f;
+  background: #0f1419;
+  color: #e7e9ea;
+}
+button {
+  margin-top: 6px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #5865f2;
+  color: white;
+  cursor: pointer;
+}
+button.secondary { background: #3a4553; }
+button.done-btn { background: #3ba55d; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.work-status { margin-bottom: 12px; }
+.bar-track {
+  height: 10px;
+  background: #0f1419;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.bar-fill {
+  height: 100%;
+  background: #3ba55d;
+  transition: width 0.3s ease;
+}
+.hint, .muted { font-size: 0.8rem; opacity: 0.8; margin: 6px 0 0; }
+.hint code {
+  background: #0f1419;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.ok { color: #3ba55d; }
+.warn { color: #faa81a; }
+.timer-line {
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  margin: 4px 0;
+}
+.timer-line strong {
+  font-size: 1.35rem;
+  letter-spacing: 0.02em;
+}
+.eta-complete {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+}
+.eta-complete strong {
+  color: #57f287;
+  font-size: 1.1rem;
+}
+.date-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.date-bar input[type='date'] {
+  width: auto;
+  margin-top: 0;
+}
+.date-bar .tabs {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+.date-bar button {
+  margin-top: 0;
+}
+.banner {
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+.banner.plan {
+  background: #1a3a4a;
+  border: 1px solid #2a6f8f;
+}
+.banner.hist {
+  background: #2a2438;
+  border: 1px solid #5a4a7a;
+}
+.history-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 12px;
+}
+.history-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.history-list li {
+  margin-bottom: 6px;
+}
+.history-list button {
+  width: 100%;
+  margin-top: 0;
+  text-align: left;
+}
+.report-meta {
+  margin-bottom: 12px;
+}
+.report-block {
+  border-top: 1px solid #2f3b47;
+  padding: 12px 0;
+}
+.report-block h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+.report-block pre {
+  white-space: pre-wrap;
+  background: #0f1419;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.modal {
+  width: min(480px, 92vw);
+  max-height: 90vh;
+  overflow: auto;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+.check input {
+  width: auto;
+  margin: 0;
+}
+@media (max-width: 900px) {
+  .history-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.message-list { list-style: none; padding: 0; margin: 0; }
+.message-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #2f3b47;
+  font-size: 0.9rem;
+}
+.row-actions { display: flex; gap: 6px; }
+.row-actions button { margin-top: 0; font-size: 0.8rem; padding: 4px 8px; }
+.preview pre, .log-box {
+  white-space: pre-wrap;
+  background: #0f1419;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 0.8rem;
+  max-height: 160px;
+  overflow: auto;
+}
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+}

@@ -1,4 +1,4 @@
-import { spawn, execSync, execFileSync } from 'child_process';
+import { spawn, execSync, execFileSync, type ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { appendLog } from './db';
@@ -47,14 +47,38 @@ export function killDiscordChrome() {
   }
 }
 
+const trackedChildren = new Set<ChildProcess>();
+
+function trackChild(child: ChildProcess): ChildProcess {
+  trackedChildren.add(child);
+  child.once('close', () => trackedChildren.delete(child));
+  child.once('error', () => trackedChildren.delete(child));
+  return child;
+}
+
+/** Stop Discord send/login child processes and automation Chrome on app exit. */
+export function shutdownDiscordEngine() {
+  for (const child of trackedChildren) {
+    try {
+      if (!child.killed) child.kill();
+    } catch {
+      // ignore
+    }
+  }
+  trackedChildren.clear();
+  killDiscordChrome();
+}
+
 export function openDiscordLogin(): Promise<void> {
   ensureEngineFiles();
   return new Promise((resolve, reject) => {
     const script = path.join(engineDir(), 'open-discord-login.ps1');
-    const child = spawn(
-      'powershell',
-      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script],
-      { cwd: engineDir(), windowsHide: false },
+    const child = trackChild(
+      spawn(
+        'powershell',
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script],
+        { cwd: engineDir(), windowsHide: false },
+      ),
     );
     child.on('close', (code) => {
       if (code === 0) {
@@ -71,21 +95,22 @@ function runSendScript(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const sendScript = path.join(engineDir(), 'send-discord.mjs');
     const nodeBin = resolveNodeBinary();
-    const child = spawn(nodeBin, [sendScript, ...args], {
-      cwd: engineDir(),
-      stdio: ['ignore', 'pipe', 'pipe'],
-      windowsHide: true,
-      env: {
-        ...process.env,
-        // Pastikan child tidak dianggap Electron app
-        ELECTRON_RUN_AS_NODE: undefined,
-      },
-    });
+    const child = trackChild(
+      spawn(nodeBin, [sendScript, ...args], {
+        cwd: engineDir(),
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true,
+        env: {
+          ...process.env,
+          ELECTRON_RUN_AS_NODE: undefined,
+        },
+      }),
+    );
     let out = '';
-    child.stdout.on('data', (d) => {
+    child.stdout?.on('data', (d) => {
       out += d.toString();
     });
-    child.stderr.on('data', (d) => {
+    child.stderr?.on('data', (d) => {
       out += d.toString();
     });
     child.on('error', (err) => {

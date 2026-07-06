@@ -247,6 +247,7 @@ export function addLogin(workDayId: number, date: string, scheduled_time: string
        VALUES (?, 'login', ?, ?, ?, 'pending', ?)`,
     )
     .run(workDayId, scheduled_time, JSON.stringify(lines), text, sort_order);
+  refreshLogoutRender(workDayId, date);
   return Number(result.lastInsertRowid);
 }
 
@@ -276,6 +277,8 @@ export function addProgress(
       text,
       sort_order,
     );
+  const day = getWorkDayById(workDayId);
+  if (day) refreshLogoutRender(workDayId, day.date);
   return Number(result.lastInsertRowid);
 }
 
@@ -320,7 +323,7 @@ export function computeSum(workDayId: number): string {
   const login = getDb()
     .prepare(
       `SELECT body_extra FROM messages
-       WHERE work_day_id = ? AND type = 'login' AND status = 'sent'
+       WHERE work_day_id = ? AND type = 'login'
        ORDER BY scheduled_time, id LIMIT 1`,
     )
     .get(workDayId) as { body_extra: string | null } | undefined;
@@ -337,7 +340,7 @@ export function computeSum(workDayId: number): string {
   const rows = getDb()
     .prepare(
       `SELECT title FROM messages
-       WHERE work_day_id = ? AND type = 'progress' AND status = 'sent' AND title IS NOT NULL
+       WHERE work_day_id = ? AND type = 'progress' AND title IS NOT NULL
        ORDER BY scheduled_time, sort_order, id`,
     )
     .all(workDayId) as { title: string }[];
@@ -745,7 +748,12 @@ export function markMessageStatus(
 }
 
 export function deleteMessage(id: number) {
+  const msg = getMessageById(id);
   getDb().prepare('DELETE FROM messages WHERE id = ?').run(id);
+  if (msg && msg.type !== 'logout') {
+    const day = getWorkDayById(msg.work_day_id);
+    if (day) refreshLogoutRender(msg.work_day_id, day.date);
+  }
 }
 
 export function setSchedulerStatus(

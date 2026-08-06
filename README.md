@@ -68,24 +68,58 @@ Daily notes can include sensitive work detail. Keeping data local means no hosti
 
 - **Windows 10/11** or **macOS** (Apple Silicon or Intel)
 - **Node.js 20+** (LTS recommended)
-- **Google Chrome** installed (required for Discord automation)
+- **Google Chrome** installed under `/Applications` on Mac (required for Discord automation)
 - A Discord account with access to the target channel
+
+> **macOS note:** Cross-platform support currently lives on the `hafid_dev` branch until it has been smoke-tested on a real Mac. Use that branch for install steps below.
 
 ---
 
 ## Installation
 
-```bash
+### Windows
+
+In PowerShell or Command Prompt:
+
+```powershell
 git clone https://github.com/hafidrf/progress-reporter-kerja.git
+cd progress-reporter-kerja
+git checkout hafid_dev
+npm install
+npm run setup:discord
+npm run build
+```
+
+### macOS
+
+1. Install **Google Chrome** from [google.com/chrome](https://www.google.com/chrome/) if it is not already in `/Applications`.
+2. Install **Node.js 20+** (Homebrew example):
+
+```bash
+brew install node@20
+```
+
+3. Clone the repo on the `hafid_dev` branch, install, and build:
+
+```bash
+git clone -b hafid_dev https://github.com/hafidrf/progress-reporter-kerja.git
 cd progress-reporter-kerja
 npm install
 npm run setup:discord
 npm run build
 ```
 
-On Windows you can use the same commands in PowerShell or Command Prompt.
+`npm install` rebuilds native modules (`better-sqlite3`) for Electron on your Mac. If that step fails, run `npm run postinstall` again after Xcode Command Line Tools are installed (`xcode-select --install`).
 
-Edit your Discord channel in `scripts/discord-browser/config.json`:
+4. Make the launcher executable (once):
+
+```bash
+chmod +x start-app.sh
+```
+
+### Configure Discord channel (both platforms)
+
+Edit `scripts/discord-browser/config.json`:
 
 ```json
 {
@@ -101,7 +135,9 @@ To obtain the channel URL: open the channel in Discord Web and copy it from the 
 
 ## Discord setup (one-time)
 
-1. Run the app: `npm start`
+1. Run the app:
+   - Windows: `npm start`
+   - macOS: `npm start` or `./start-app.sh`
 2. Click **Setup Discord**
 3. A separate Chrome window opens — sign in to Discord if prompted
 4. Open the target channel
@@ -120,10 +156,11 @@ npm run desktop-shortcut
 ```
 
 - **Windows:** creates `Progress Reporter Kerja.lnk` on the Desktop
-- **macOS:** creates `Progress Reporter Kerja.command` on the Desktop (double-click; first open may need right-click → Open)
+- **macOS:** creates `Progress Reporter Kerja.command` on the Desktop  
+  - First launch: right-click → **Open** (Gatekeeper may block an unsigned `.command`)  
+  - Or run from Terminal: `./start-app.sh`
 
-You can also launch with `./start-app.sh` (macOS/Linux) or `.\start-app.ps1` (Windows).
-
+You can also launch with `./start-app.sh` (macOS) or `.\start-app.ps1` (Windows).
 ---
 
 ## Daily workflow

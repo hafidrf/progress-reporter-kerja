@@ -10,10 +10,10 @@
   },
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron . -- --prk-dev\"",
-    "start": "npm run build && electron .",
+    "dev": "node init && npm run build:electron && concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron . -- --prk-dev\"",
+    "start": "node init && npm run build && electron .",
     "build:electron": "tsc -p tsconfig.electron.json",
-    "build": "npm run build:electron && vite build",
+    "build": "node init && npm run build:electron && vite build",
     "postinstall": "electron-rebuild -f -w better-sqlite3 && npm install --prefix scripts/discord-browser",
     "setup:discord": "node scripts/setup-discord.mjs",
     "desktop-shortcut": "node scripts/create-desktop-shortcut.mjs",

@@ -3,7 +3,8 @@
  * Send a message to Discord via a separate Chrome profile.
  *
  * Setup:
- *   .\open-discord-login.ps1
+ *   node open-discord-login.mjs
+ *   (or use Setup Discord in the app)
  *
  * Usage:
  *   node send-discord.mjs --next --dry-run
@@ -16,7 +17,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { chromium } from 'playwright';
-import { execSync } from 'child_process';
+import { killDiscordChrome } from './chrome-process.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -80,7 +81,8 @@ function markSent(id) {
 function ensureProfileExists() {
   if (!fs.existsSync(profileDir)) {
     throw new Error(
-      'Chrome profile belum ada. Jalankan dulu: .\\open-discord-login.ps1\n' +
+      'Chrome profile belum ada. Jalankan Setup Discord di app, atau:\n' +
+        '  node open-discord-login.mjs\n' +
         'Lalu login Discord sekali di jendela Chrome terpisah itu.',
     );
   }
@@ -139,17 +141,6 @@ async function sendMessage(page, text) {
   await page.keyboard.press('Enter');
 }
 
-function killDiscordChrome() {
-  try {
-    execSync(
-      `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"name='chrome.exe'\\" | Where-Object { $_.CommandLine -like '*discord-browser\\\\chrome-profile*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"`,
-      { stdio: 'ignore' },
-    );
-  } catch {
-    // ignore
-  }
-}
-
 async function openChannel(page) {
   const target = config.channelUrl;
   if (!target || target.includes('YOUR_GUILD_ID')) {
@@ -178,18 +169,22 @@ async function launchDiscordChrome() {
   console.log('Membuka Chrome profil terpisah (Discord automation)...');
   console.log('Chrome kerja utama tidak akan terganggu.\n');
 
+  const args = [
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
+  ];
+  if (process.platform === 'win32') {
+    args.push('--disable-features=CalculateNativeWinOcclusion');
+  }
+
   const context = await chromium.launchPersistentContext(profileDir, {
     channel: 'chrome',
     headless: false,
     viewport: null,
-    args: [
-      '--no-first-run',
-      '--no-default-browser-check',
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding',
-      '--disable-features=CalculateNativeWinOcclusion',
-    ],
+    args,
   });
   return context;
 }

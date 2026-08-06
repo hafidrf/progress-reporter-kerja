@@ -101,11 +101,16 @@ function createWindow() {
 
 if (gotSingleInstanceLock) {
   app.whenReady().then(() => {
-    const settings = getSettings();
-    const channelUrl =
-      settings.discord_channel_url.trim() || readChannelUrlFromConfig() || '';
-    if (channelUrl) {
-      syncChannelUrl(channelUrl);
+    try {
+      const settings = getSettings();
+      const channelUrl =
+        settings.discord_channel_url.trim() || readChannelUrlFromConfig() || '';
+      if (channelUrl) {
+        syncChannelUrl(channelUrl);
+      }
+    } catch (err) {
+      // Jangan biarkan Electron hang tanpa window (mis. DB corrupt setelah restore).
+      console.error('[prk] Failed to init settings/DB before window:', err);
     }
     createWindow();
   });

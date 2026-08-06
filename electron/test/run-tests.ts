@@ -125,6 +125,14 @@ async function run() {
     assert.ok(text.includes('- Pending:'));
   });
 
+  await test('buildLogoutText omits Integration when empty', () => {
+    const text = buildLogoutText('2026-07-03', 'Worked on Task A.', '', 'Still pending review.');
+    assert.ok(text.includes('- Sum: Worked on Task A.'));
+    assert.ok(!text.includes('- Integration:'));
+    assert.ok(text.includes('- Pending:'));
+    assert.ok(text.includes('Still pending review.'));
+  });
+
   await test('engine directory exists', () => {
     const dir = engineDir();
     assert.ok(fs.existsSync(dir), `Missing ${dir}`);

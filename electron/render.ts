@@ -152,8 +152,11 @@ export function buildLogoutText(
 ): string {
   const lines = [`Logout(${formatDateLabel(date)}): `];
   lines.push(`- Sum: ${sum.trim()}`);
-  lines.push('- Integration: ');
-  lines.push(integration.trim());
+  const integrationBody = integration.trim();
+  if (integrationBody) {
+    lines.push('- Integration: ');
+    lines.push(integrationBody);
+  }
   lines.push('- Pending: ');
   lines.push(pending.trim());
   return lines.join('\n');

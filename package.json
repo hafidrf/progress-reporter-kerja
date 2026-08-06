@@ -1,7 +1,7 @@
 {
   "name": "progress-reporter-kerja",
   "version": "0.1.0",
-  "description": "Windows desktop app that plans, schedules, and sends daily work updates to Discord",
+  "description": "Windows/macOS desktop app that plans, schedules, and sends daily work updates to Discord",
   "author": "hafidrf",
   "license": "MIT",
   "repository": {
@@ -15,8 +15,8 @@
     "build:electron": "tsc -p tsconfig.electron.json",
     "build": "npm run build:electron && vite build",
     "postinstall": "electron-rebuild -f -w better-sqlite3 && npm install --prefix scripts/discord-browser",
-    "setup:discord": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Copy-Item -Force scripts/discord-browser/config.example.json scripts/discord-browser/config.json -ErrorAction SilentlyContinue; Copy-Item -Force scripts/discord-browser/messages-pending.example.json scripts/discord-browser/messages-pending.json -ErrorAction SilentlyContinue\"",
-    "desktop-shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/create-desktop-shortcut.ps1",
+    "setup:discord": "node scripts/setup-discord.mjs",
+    "desktop-shortcut": "node scripts/create-desktop-shortcut.mjs",
     "test": "npm run build:electron && node dist-electron/test/run-tests.js",
     "test:integration": "node scripts/integration-test.mjs"
   },

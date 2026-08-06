@@ -1,4 +1,4 @@
-import { spawn, execSync, execFileSync, type ChildProcess } from 'child_process';
+import { spawn, execFileSync, type ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { appendLog } from './db';
@@ -21,27 +21,77 @@ function ensureEngineFiles() {
   }
 }
 
-/** Pakai Node sistem — jangan electron.exe (gagal/aneh saat background). */
+/** Use system Node — not the Electron binary (breaks when run as background child). */
 function resolveNodeBinary(): string {
   if (process.env.npm_node_execpath && fs.existsSync(process.env.npm_node_execpath)) {
     return process.env.npm_node_execpath;
   }
+  // Finder / .command launches often lack nvm on PATH; check Homebrew next.
+  if (process.platform === 'darwin') {
+    for (const candidate of ['/opt/homebrew/bin/node', '/usr/local/bin/node']) {
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  }
   try {
-    const out = execFileSync('where.exe', ['node'], { encoding: 'utf8' });
-    const first = out.split(/\r?\n/).map((s) => s.trim()).find(Boolean);
-    if (first && fs.existsSync(first)) return first;
+    if (process.platform === 'win32') {
+      const out = execFileSync('where.exe', ['node'], { encoding: 'utf8' });
+      const first = out
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .find(Boolean);
+      if (first && fs.existsSync(first)) return first;
+    } else {
+      const out = execFileSync('which', ['node'], { encoding: 'utf8' });
+      const first = out.trim().split(/\r?\n/)[0]?.trim();
+      if (first && fs.existsSync(first)) return first;
+    }
   } catch {
     // ignore
   }
   return 'node';
 }
 
+/** Env for child Node scripts: drop Electron-as-Node, keep Homebrew on PATH. */
+function childNodeEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+  if (process.platform !== 'win32') {
+    const prefix = ['/opt/homebrew/bin', '/usr/local/bin'];
+    env.PATH = [...prefix, env.PATH || '/usr/bin:/bin'].join(':');
+  }
+  return env;
+}
+
+function escapePkillPattern(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function killDiscordChrome() {
   try {
-    execSync(
-      `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"name='chrome.exe'\\" | Where-Object { $_.CommandLine -like '*discord-browser\\\\chrome-profile*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"`,
-      { stdio: 'ignore' },
-    );
+    if (process.platform === 'win32') {
+      execFileSync(
+        'powershell',
+        [
+          '-NoProfile',
+          '-Command',
+          // One `\` in the -like pattern matches Windows CommandLine (discord-browser\chrome-profile).
+          "Get-CimInstance Win32_Process -Filter \"name='chrome.exe'\" | Where-Object { $_.CommandLine -like '*discord-browser\\chrome-profile*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
+        ],
+        { stdio: 'ignore' },
+      );
+    } else {
+      // Match absolute user-data-dir (pkill -f is a regex — escape the path).
+      const pattern = escapePkillPattern(
+        path.join(engineDir(), 'chrome-profile'),
+      );
+      try {
+        execFileSync('pkill', ['-f', pattern], {
+          stdio: 'ignore',
+        });
+      } catch {
+        // pkill exits non-zero when nothing matched
+      }
+    }
   } catch {
     // ignore
   }
@@ -72,20 +122,36 @@ export function shutdownDiscordEngine() {
 export function openDiscordLogin(): Promise<void> {
   ensureEngineFiles();
   return new Promise((resolve, reject) => {
-    const script = path.join(engineDir(), 'open-discord-login.ps1');
+    const script = path.join(engineDir(), 'open-discord-login.mjs');
+    const nodeBin = resolveNodeBinary();
     const child = trackChild(
-      spawn(
-        'powershell',
-        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script],
-        { cwd: engineDir(), windowsHide: false },
-      ),
+      spawn(nodeBin, [script], {
+        cwd: engineDir(),
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: false,
+        env: childNodeEnv(),
+      }),
     );
+    let out = '';
+    child.stdout?.on('data', (d) => {
+      out += d.toString();
+    });
+    child.stderr?.on('data', (d) => {
+      out += d.toString();
+    });
+    child.on('error', (err) => {
+      reject(new Error(`Failed to open Discord login: ${err.message}`));
+    });
     child.on('close', (code) => {
       if (code === 0) {
         appendLog('Discord login window opened');
         resolve();
       } else {
-        reject(new Error(`open-discord-login exited with code ${code}`));
+        reject(
+          new Error(
+            out.trim() || `open-discord-login exited with code ${code}`,
+          ),
+        );
       }
     });
   });
@@ -100,10 +166,7 @@ function runSendScript(args: string[]): Promise<string> {
         cwd: engineDir(),
         stdio: ['ignore', 'pipe', 'pipe'],
         windowsHide: true,
-        env: {
-          ...process.env,
-          ELECTRON_RUN_AS_NODE: undefined,
-        },
+        env: childNodeEnv(),
       }),
     );
     let out = '';

@@ -1,6 +1,6 @@
 # Progress Reporter Kerja
 
-**Progress Reporter Kerja** is a Windows desktop app for planning, scheduling, and sending daily work updates. You outline the day once; the app formats messages, waits for the right times, and delivers them — without manual copy-paste, without a webhook server, and without touching your main browser profile.
+**Progress Reporter Kerja** is a Windows/macOS desktop app for planning, scheduling, and sending daily work updates. You outline the day once; the app formats messages, waits for the right times, and delivers them — without manual copy-paste, without a webhook server, and without touching your main browser profile.
 
 Delivery today uses **Discord** via local browser automation. The same local-first design (Electron + SQLite) keeps your plans and history on your machine.
 
@@ -11,7 +11,7 @@ Delivery today uses **Discord** via local browser automation. The same local-fir
 Routine status updates are easy to postpone or mistype. This app is for anyone who wants:
 
 - A clear daily plan (start-of-day note, timed progress notes, end-of-day wrap-up)
-- Reliable send times, including when the monitor is off (as long as the PC is not asleep)
+- Reliable send times, including when the monitor is off (as long as the machine is not asleep)
 - Automatic assembly of an end-of-day summary from what you already logged
 - Delivery without needing Discord webhook permissions on the server
 
@@ -48,6 +48,7 @@ Plan in the morning, press **Start Today**, and let the scheduler run.
 ┌─────────────────────────────────────────────────────────┐
 │  scripts/discord-browser/ (Playwright engine)           │
 │  ├── send-discord.mjs — open Chrome, paste, send        │
+│  ├── open-discord-login.mjs — isolated Chrome login     │
 │  ├── config.json — channel URL (local, not committed)   │
 │  └── chrome-profile/ — Discord session (local)          │
 └─────────────────────────────────────────────────────────┘
@@ -65,23 +66,24 @@ Daily notes can include sensitive work detail. Keeping data local means no hosti
 
 ## Prerequisites
 
-- **Windows 10/11**
+- **Windows 10/11** or **macOS** (Apple Silicon or Intel)
 - **Node.js 20+** (LTS recommended)
-- **Google Chrome** installed
-- **PowerShell** (included with Windows)
+- **Google Chrome** installed (required for Discord automation)
 - A Discord account with access to the target channel
 
 ---
 
 ## Installation
 
-```powershell
+```bash
 git clone https://github.com/hafidrf/progress-reporter-kerja.git
 cd progress-reporter-kerja
 npm install
 npm run setup:discord
 npm run build
 ```
+
+On Windows you can use the same commands in PowerShell or Command Prompt.
 
 Edit your Discord channel in `scripts/discord-browser/config.json`:
 
@@ -107,15 +109,20 @@ To obtain the channel URL: open the channel in Discord Web and copy it from the 
 
 The session is stored in `scripts/discord-browser/chrome-profile/` (this folder is not committed).
 
+**Note:** The Chrome profile is not portable across machines or OS. On a new Mac (or after cloning), run Setup Discord again even if you already did it on Windows.
+
 ---
 
 ## Desktop shortcut (optional)
 
-```powershell
+```bash
 npm run desktop-shortcut
 ```
 
-This creates a **Progress Reporter Kerja** shortcut on your Desktop.
+- **Windows:** creates `Progress Reporter Kerja.lnk` on the Desktop
+- **macOS:** creates `Progress Reporter Kerja.command` on the Desktop (double-click; first open may need right-click → Open)
+
+You can also launch with `./start-app.sh` (macOS/Linux) or `.\start-app.ps1` (Windows).
 
 ---
 
@@ -212,15 +219,19 @@ progress-reporter-kerja/
 ├── electron/           # Main process: DB, scheduler, Discord bridge
 │   ├── db.ts           # SQLite schema & business logic
 │   ├── scheduler.ts    # Background message dispatcher
-│   ├── discord.ts      # Spawns Playwright engine
+│   ├── discord.ts      # Spawns Playwright engine (Win/macOS)
 │   └── render.ts       # Message formatting & timer maths
 ├── src/                # React UI
 ├── scripts/
+│   ├── setup-discord.mjs
+│   ├── create-desktop-shortcut.mjs
 │   └── discord-browser/  # Playwright send engine
 │       ├── send-discord.mjs
-│       ├── config.example.json
-│       └── open-discord-login.ps1
-├── start-app.ps1       # Launcher for desktop shortcut
+│       ├── open-discord-login.mjs
+│       ├── chrome-process.mjs
+│       └── config.example.json
+├── start-app.ps1       # Windows launcher
+├── start-app.sh        # macOS / Linux launcher
 └── package.json
 ```
 
@@ -236,7 +247,7 @@ progress-reporter-kerja/
 | `npm run setup:discord` | Copy example config files to local config |
 | `npm test` | Unit tests for formatting logic |
 | `npm run test:integration` | Dry-run the Discord engine |
-| `npm run desktop-shortcut` | Create a Desktop shortcut |
+| `npm run desktop-shortcut` | Create a Desktop shortcut (Windows or macOS) |
 
 ---
 
@@ -244,7 +255,7 @@ progress-reporter-kerja/
 
 ### Messages not sending when the monitor is off
 
-Ensure the PC is not sleeping or hibernating. The app uses a power-save blocker, but full system sleep still stops all processes.
+Ensure the machine is not sleeping or hibernating (including Mac lid-close sleep). The app uses a power-save blocker, but full system sleep still stops all processes.
 
 ### “Message box did not appear”
 
@@ -253,17 +264,29 @@ Ensure the PC is not sleeping or hibernating. The app uses a power-save blocker,
 3. Open the target channel manually once
 4. Close the automation Chrome window, then try **Send now**
 
+### Chrome not found (macOS)
+
+Install Google Chrome under `/Applications`. The login helper looks for:
+
+`/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`
+
 ### Chrome profile locked
 
 Close the automation Chrome window (not your main browser). The app ends processes that use the `discord-browser/chrome-profile` profile before each send.
 
+On macOS you can also free a stuck profile with:
+
+```bash
+pkill -f "discord-browser/chrome-profile"
+```
+
 ### `better-sqlite3` build failure
 
-```powershell
+```bash
 npm run postinstall
 ```
 
-The native module must be rebuilt for the Electron version in use.
+The native module must be rebuilt for the Electron version in use (required after `npm install` on each OS).
 
 ### End-of-day message not sending automatically
 
@@ -277,7 +300,9 @@ These paths are **not** part of the repository:
 
 - `scripts/discord-browser/config.json` — your channel URL
 - `scripts/discord-browser/chrome-profile/` — Discord login session
-- SQLite database under `%APPDATA%/progress-reporter-kerja/` — work history
+- SQLite database:
+  - **Windows:** `%APPDATA%/progress-reporter-kerja/`
+  - **macOS:** `~/Library/Application Support/progress-reporter-kerja/`
 
 Do not commit them to a public git repository.
 
@@ -286,7 +311,7 @@ Do not commit them to a public git repository.
 ## Roadmap
 
 - [ ] Sync history to a backend API
-- [ ] Installer packaging (electron-builder)
+- [ ] Installer packaging (electron-builder / `.dmg`)
 - [ ] Channel URL configuration from the UI
 - [ ] Desktop notifications on send failure
 

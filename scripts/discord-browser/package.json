@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "login": "powershell -File open-discord-login.ps1",
+    "login": "node open-discord-login.mjs",
     "start-daily": "powershell -File start-daily.ps1",
     "stop-daily": "powershell -File stop-daily.ps1",
     "send:next": "node send-discord.mjs --next",

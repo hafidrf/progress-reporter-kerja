@@ -7,6 +7,7 @@ dist-electron/
 
 # Internal planning notes (not for public repo)
 PLAN.md
+temp_auto_push.bat
 
 # Discord automation — local/session data
 scripts/discord-browser/node_modules/
@@ -17,3 +18,5 @@ scripts/discord-browser/messages-pending.json
 scripts/discord-browser/run-daily.log
 scripts/discord-browser/run-daily.pid
 scripts/discord-browser/discord-storage.json
+.gitignore
+branch_structure.json
